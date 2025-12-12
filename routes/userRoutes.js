@@ -124,25 +124,31 @@ router.post("/activity/logout", async (req, res) => {
 });
 
 /* ============================================================
-   ACTIVITY: QUIZ ATTEMPT
+   ACTIVITY: QUIZ ATTEMPT  (FIXED!)
 ============================================================ */
 router.post("/activity/quiz", async (req, res) => {
   const { user_id, type, score, timeSpent } = req.body;
-
   const date = moment().tz("America/Chicago").format("YYYY-MM-DD");
 
   try {
     const user = await User.findById(user_id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    /* ------------------------------
-       Update global quiz history
-    ------------------------------ */
+    /* --------------------------------------
+       UPDATE GLOBAL QUIZ HISTORY
+    -------------------------------------- */
     if (!user.quizHistory) user.quizHistory = [];
 
     let quiz = user.quizHistory.find((q) => q.type === type);
     if (!quiz) {
-      quiz = { type, attempts: 0, scores: [], timeSpent: [], reached80Percent: false, attemptsToReach80: 0 };
+      quiz = {
+        type,
+        attempts: 0,
+        scores: [],
+        timeSpent: [],
+        reached80Percent: false,
+        attemptsToReach80: 0,
+      };
       user.quizHistory.push(quiz);
     }
 
@@ -155,20 +161,34 @@ router.post("/activity/quiz", async (req, res) => {
       quiz.attemptsToReach80 = quiz.attempts;
     }
 
-    /* ------------------------------
-       Update DAILY activity logs
-    ------------------------------ */
+    /* --------------------------------------
+       UPDATE DAILY ACTIVITY LOGS
+       (FIXED quizzes[] storage)
+    -------------------------------------- */
     if (!user.activityLogs) user.activityLogs = [];
 
     let log = user.activityLogs.find((l) => l.date === date);
     if (!log) {
-      log = { date, loginTimes: [], logoutTimes: [], pagesVisited: [], quizzes: [] };
+      log = {
+        date,
+        loginTimes: [],
+        logoutTimes: [],
+        pagesVisited: [],
+        quizzes: [],   // ✅ correctly created
+      };
       user.activityLogs.push(log);
     }
 
     let dailyQuiz = log.quizzes.find((q) => q.type === type);
     if (!dailyQuiz) {
-      dailyQuiz = { type, attempts: 0, scores: [], timeSpent: [], reached80Percent: false, attemptsToReach80: 0 };
+      dailyQuiz = {
+        type,
+        attempts: 0,
+        scores: [],
+        timeSpent: [],
+        reached80Percent: false,
+        attemptsToReach80: 0,
+      };
       log.quizzes.push(dailyQuiz);
     }
 
@@ -183,7 +203,12 @@ router.post("/activity/quiz", async (req, res) => {
 
     await user.save();
 
-    res.json({ message: "Quiz recorded", quizHistory: user.quizHistory });
+    res.json({
+      message: "Quiz recorded",
+      quizHistory: user.quizHistory,
+      dailyActivity: log.quizzes,
+    });
+
   } catch (err) {
     console.error("Quiz log error:", err);
     res.status(500).json({ error: err.message });

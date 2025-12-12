@@ -1,37 +1,60 @@
-const { UUID } = require("mongodb");
 const mongoose = require("mongoose");
 
-const ActivityLogSchema = new mongoose.Schema({
-  date: { type: String }, // e.g., "2025-03-23"
-  loginTimes: [String], // all login timestamps
-  logoutTimes: [String], // all logout timestamps
-  quizHistory: [
-    {
-      type: { type: String, required: true }, // Quiz type
-      attempts: { type: Number, default: 0 }, // Total attempts
-      scores: { type: [Number], default: [] }, // List of scores
-      timeSpent: { type: [Number], default: [] }, // Time spent on each attempt
-      attemptsToReach80: { type: Number, default: 0 }, // Attempts to reach 80%
-    },
-  ],
+/* ============================================================
+   DAILY QUIZ SCHEMA (for activityLogs[].quizzes)
+============================================================ */
+const DailyQuizSchema = new mongoose.Schema({
+  type: { type: String, required: true },     // quiz type
+  attempts: { type: Number, default: 0 },     // number of attempts today
+  scores: { type: [Number], default: [] },    // percentage scores
+  timeSpent: { type: [Number], default: [] }, // seconds spent
+  reached80Percent: { type: Boolean, default: false },
+  attemptsToReach80: { type: Number, default: 0 },
 });
+
+/* ============================================================
+   ACTIVITY LOG SCHEMA (per day)
+============================================================ */
+const ActivityLogSchema = new mongoose.Schema({
+  date: { type: String },        // YYYY-MM-DD
+  loginTimes: [String],          // login timestamps
+  logoutTimes: [String],         // logout timestamps
+  pagesVisited: [String],        // optional future use
+  quizzes: [DailyQuizSchema],    // FIXED: correct quizzes array
+});
+
+/* ============================================================
+   GLOBAL QUIZ HISTORY SCHEMA (lifetime)
+============================================================ */
+const GlobalQuizHistorySchema = new mongoose.Schema({
+  type: { type: String, required: true },   // quiz type
+  attempts: { type: Number, default: 0 },   // total attempts
+  scores: { type: [Number], default: [] },  // % scores
+  timeSpent: { type: [Number], default: [] },
+  reached80Percent: { type: Boolean, default: false },
+  attemptsToReach80: { type: Number, default: 0 },
+});
+
+/* ============================================================
+   USER SCHEMA
+============================================================ */
 const userSchema = new mongoose.Schema({
   username: String,
   email: String,
   firstName: String,
   lastName: String,
   password: String,
-  registeredAt: { type: Date, default: Date.now, immutable: true  },
+
+  registeredAt: { type: Date, default: Date.now, immutable: true },
+
   quizAttempts: { type: Number, default: 0 },
-  quizHistory: [
-    {
-      type: { type: String, required: true }, 
-      attempts: { type: Number, default: 0 }, 
-      scores: { type: [Number], default: [] }, 
-      timeSpent: { type: [Number], default: [] },
-      attemptsToReach80: { type: Number, default: 0 }, 
-    },
-  ],
+
+  /* Lifetime quiz summary */
+  quizHistory: [GlobalQuizHistorySchema],
+
+  /* ======================================================
+     ALL YOUR SCORE FIELDS
+  ====================================================== */
   decompositionScore: { type: Number, default: -1 },
   patternScore: { type: Number, default: -1 },
   abstractionScore: { type: Number, default: -1 },
@@ -56,11 +79,15 @@ const userSchema = new mongoose.Schema({
   cobolThreeScore: { type: Number, default: -1 },
   cobolFourScore: { type: Number, default: -1 },
   cobolSixScore: { type: Number, default: -1 },
+
+  /* Role + activity */
   role: String,
   lastActivity: String,
   inactiveDays: Number,
-  activityLogs: [ActivityLogSchema],
 
+  /* Daily logs */
+  activityLogs: [ActivityLogSchema],
 });
+
 const workLearner = mongoose.model("users", userSchema);
 module.exports = workLearner;
