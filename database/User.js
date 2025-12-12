@@ -1,24 +1,38 @@
 const mongoose = require("mongoose");
 
 /* ============================================================
-   DAILY ACTIVITY LOG (corrected)
+   DAILY QUIZ ACTIVITY (inside activityLogs[])
+============================================================ */
+const DailyQuizSchema = new mongoose.Schema({
+  type: { type: String, required: true },
+  attempts: { type: Number, default: 0 },
+  scores: { type: [Number], default: [] },
+  timeSpent: { type: [Number], default: [] },
+  reached80Percent: { type: Boolean, default: false },
+  attemptsToReach80: { type: Number, default: 0 },
+});
+
+/* ============================================================
+   DAILY ACTIVITY LOGS
 ============================================================ */
 const ActivityLogSchema = new mongoose.Schema({
   date: { type: String },
   loginTimes: [String],
   logoutTimes: [String],
-  pagesVisited: { type: [String], default: [] },
+  pagesVisited: [String],
+  quizzes: [DailyQuizSchema],     // ✅ MUST be “quizzes”, NOT “quizHistory”
+});
 
-  quizzes: [
-    {
-      type: { type: String, required: true },
-      attempts: { type: Number, default: 0 },
-      scores: { type: [Number], default: [] },
-      timeSpent: { type: [Number], default: [] },
-      reached80Percent: { type: Boolean, default: false },
-      attemptsToReach80: { type: Number, default: 0 },
-    },
-  ],
+/* ============================================================
+   OVERALL QUIZ HISTORY (global summary)
+============================================================ */
+const QuizHistorySchema = new mongoose.Schema({
+  type: { type: String, required: true },
+  attempts: { type: Number, default: 0 },
+  scores: { type: [Number], default: [] },
+  timeSpent: { type: [Number], default: [] },
+  reached80Percent: { type: Boolean, default: false },
+  attemptsToReach80: { type: Number, default: 0 },
 });
 
 /* ============================================================
@@ -34,16 +48,7 @@ const userSchema = new mongoose.Schema({
 
   quizAttempts: { type: Number, default: 0 },
 
-  quizHistory: [
-    {
-      type: { type: String, required: true },
-      attempts: { type: Number, default: 0 },
-      scores: { type: [Number], default: [] },
-      timeSpent: { type: [Number], default: [] },
-      reached80Percent: { type: Boolean, default: false },
-      attemptsToReach80: { type: Number, default: 0 },
-    },
-  ],
+  quizHistory: [QuizHistorySchema],  // ✅ global quiz history
 
   decompositionScore: { type: Number, default: -1 },
   patternScore: { type: Number, default: -1 },
@@ -73,11 +78,12 @@ const userSchema = new mongoose.Schema({
   cobolFourScore: { type: Number, default: -1 },
   cobolSixScore: { type: Number, default: -1 },
 
-  role: String,
-  lastActivity: String,
-  inactiveDays: { type: Number, default: 0 },
+  role: { type: String, default: "student" },
 
-  activityLogs: [ActivityLogSchema],
+  lastActivity: String,
+  inactiveDays: Number,
+
+  activityLogs: [ActivityLogSchema],  // ❗ MUST include quizzes[]
 });
 
 module.exports = mongoose.model("users", userSchema);

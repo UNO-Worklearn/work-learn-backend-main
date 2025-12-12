@@ -124,7 +124,7 @@ router.post("/activity/logout", async (req, res) => {
 });
 
 /* ============================================================
-   ACTIVITY: QUIZ ATTEMPT  (FIXED!)
+   ACTIVITY: QUIZ ATTEMPT (DAILY + GLOBAL QUIZ HISTORY)
 ============================================================ */
 router.post("/activity/quiz", async (req, res) => {
   const { user_id, type, score, timeSpent } = req.body;
@@ -134,9 +134,7 @@ router.post("/activity/quiz", async (req, res) => {
     const user = await User.findById(user_id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    /* --------------------------------------
-       UPDATE GLOBAL QUIZ HISTORY
-    -------------------------------------- */
+    /* --- UPDATE OVERALL QUIZ HISTORY --- */
     if (!user.quizHistory) user.quizHistory = [];
 
     let quiz = user.quizHistory.find((q) => q.type === type);
@@ -161,10 +159,7 @@ router.post("/activity/quiz", async (req, res) => {
       quiz.attemptsToReach80 = quiz.attempts;
     }
 
-    /* --------------------------------------
-       UPDATE DAILY ACTIVITY LOGS
-       (FIXED quizzes[] storage)
-    -------------------------------------- */
+    /* --- UPDATE DAILY ACTIVITY LOG --- */
     if (!user.activityLogs) user.activityLogs = [];
 
     let log = user.activityLogs.find((l) => l.date === date);
@@ -174,7 +169,7 @@ router.post("/activity/quiz", async (req, res) => {
         loginTimes: [],
         logoutTimes: [],
         pagesVisited: [],
-        quizzes: [],   // ✅ correctly created
+        quizzes: [],
       };
       user.activityLogs.push(log);
     }
@@ -211,6 +206,60 @@ router.post("/activity/quiz", async (req, res) => {
 
   } catch (err) {
     console.error("Quiz log error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ============================================================
+   UPDATE QUIZ SCORE FOR PROGRESS PAGE
+============================================================ */
+router.put("/quiz", async (req, res) => {
+  const { user_id, type, quizScore } = req.body;
+
+  if (!user_id || !type)
+    return res.status(400).json({ error: "Missing data" });
+
+  const typeMap = {
+    decomposition: "decompositionScore",
+    "pattern-recognition": "patternScore",
+    abstraction: "abstractionScore",
+    algorithms: "algorithmScore",
+    intro: "introScore",
+    review: "reviewScore",
+    email: "emailScore",
+    beyond: "beyondScore",
+    python1: "pythonOneScore",
+    python2: "pythonTwoScore",
+    python3: "pythonThreeScore",
+    python5: "pythonFiveScore",
+    python6: "pythonSixScore",
+    python7: "pythonSevenScore",
+    mainframe1: "mainframeOneScore",
+    mainframe2: "mainframeTwoScore",
+    mainframe3: "mainframeThreeScore",
+    mainframe4: "mainframeFourScore",
+    mainframe5: "mainframeFiveScore",
+    mainframe6: "mainframeSixScore",
+    cobol2: "cobolTwoScore",
+    cobol3: "cobolThreeScore",
+    cobol4: "cobolFourScore",
+    cobol6: "cobolSixScore",
+  };
+
+  const field = typeMap[type];
+  if (!field)
+    return res.status(400).json({ error: "Invalid quiz type" });
+
+  try {
+    const user = await User.findByIdAndUpdate(
+      user_id,
+      { [field]: quizScore },
+      { new: true }
+    );
+
+    res.json({ message: "Score updated", user });
+  } catch (err) {
+    console.error("Score update error:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -303,7 +352,7 @@ router.post("/forgot-password", async (req, res) => {
       to: user.email,
       subject: "Password Reset",
       html: `<p>You requested a password reset.</p>
-             <p><a href="${resetLink}">Click here</a> to reset your password. Link expires in 10 minutes.</p>`,
+             <p><a href="${resetLink}">Reset Password</a> (expires in 10 minutes)</p>`,
     });
 
     res.json({ message: "Reset email sent" });
