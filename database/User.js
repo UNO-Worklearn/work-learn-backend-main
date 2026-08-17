@@ -20,7 +20,7 @@ const ActivityLogSchema = new mongoose.Schema({
   loginTimes: [String],
   logoutTimes: [String],
   pagesVisited: [String],
-  quizzes: [DailyQuizSchema],     // ✅ MUST be “quizzes”, NOT “quizHistory”
+  quizzes: [DailyQuizSchema],
 });
 
 /* ============================================================
@@ -48,7 +48,7 @@ const userSchema = new mongoose.Schema({
 
   quizAttempts: { type: Number, default: 0 },
 
-  quizHistory: [QuizHistorySchema],  // ✅ global quiz history
+  quizHistory: [QuizHistorySchema],
 
   decompositionScore: { type: Number, default: -1 },
   patternScore: { type: Number, default: -1 },
@@ -80,10 +80,12 @@ const userSchema = new mongoose.Schema({
 
   role: { type: String, default: "student" },
 
-  lastActivity: String,
+  // Fixed: store this as a real date
+  lastActivity: { type: Date, default: null },
+
   inactiveDays: Number,
 
-  activityLogs: [ActivityLogSchema],  // ❗ MUST include quizzes[]
+  activityLogs: [ActivityLogSchema],
 });
 
 module.exports = mongoose.model("users", userSchema);
